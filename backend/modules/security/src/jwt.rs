@@ -41,7 +41,7 @@ pub enum TokenType {
 /// JWT Service for token generation and validation
 #[derive(Clone, Debug)]
 pub struct JwtService {
-    secret_key: String,
+    pub secret_key: String,
     expiration_time: usize, // in seconds
     reconnect_expiration_time: usize, // in seconds (shorter for reconnect tokens)
 }
