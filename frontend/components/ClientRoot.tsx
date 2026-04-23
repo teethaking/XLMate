@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { GameSidebar } from "@/components/GameSidebar";
+import { TransactionStatusIndicator } from "@/components/TransactionStatusIndicator";
 import Image from "next/image";
 import clsx from "clsx";
 
@@ -18,6 +19,8 @@ export default function ClientRoot({
         setCollapsed={setIsSidebarCollapsed}
       />
       <main
+        id="main-content"
+        role="main"
         className={clsx(
           "flex-1 overflow-auto transition-all duration-300",
           isSidebarCollapsed ? "md:ml-16" : "md:ml-64"
@@ -44,6 +47,7 @@ export default function ClientRoot({
         </div>
         <div className="container mx-auto p-4 md:p-8">{children}</div>
       </main>
+      <TransactionStatusIndicator />
     </div>
   );
 }

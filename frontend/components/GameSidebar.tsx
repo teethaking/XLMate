@@ -194,6 +194,7 @@ export function GameSidebar({
         <div className="border-t border-gray-800 p-2">
           <button
             onClick={() => setLocalCollapsed(!collapsed)}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className="p-2 w-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-all duration-300 group"
           >
             <div className={`transform transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`}>
@@ -233,6 +234,7 @@ function SidebarItem({
           ? "bg-gray-800/50 text-white"
           : "text-gray-400 hover:text-white hover:bg-gray-800/30"
       }`}
+      aria-current={active ? "page" : undefined}
     >
       <span
         className={`${
@@ -261,7 +263,7 @@ function MobileSidebar({ className = "" }: MobileSidebarProps) {
   const truncateAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
   return (
-    <div className={`flex flex-col h-full bg-gray-900 ${className}`}>
+    <div className={`flex flex-col h-full bg-gray-900 ${className}`} role="navigation" aria-label="Main Navigation">
       <div className="p-4 flex items-center space-x-2">
         <div className="w-16 h-16 relative">
           <Image
@@ -299,6 +301,7 @@ function MobileSidebar({ className = "" }: MobileSidebarProps) {
         ) : (
           <Button
             className="w-full bg-gradient-to-r from-teal-500 to-blue-700 hover:from-teal-600 hover:to-blue-800 text-white"
+            aria-label="Connect wallet"
             onClick={() => {}}
           >
             <div className="flex items-center">

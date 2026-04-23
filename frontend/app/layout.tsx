@@ -4,6 +4,7 @@ import ClientRoot from "@/components/ClientRoot";
 import { AppProvider } from "@/context/walletContext";
 import { MatchmakingProvider } from "@/context/matchmakingContext";
 import { ToastProvider } from "@/components/ui/toast";
+import { TransactionProvider } from "@/context/transactionContext";
 import { ThemeProvider } from "next-themes";
 
 export const metadata: Metadata = {
@@ -19,11 +20,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased font-rowdies bg-background text-foreground">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-teal-600 focus:text-white focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-400"
+        >
+          Skip to main content
+        </a>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AppProvider>
             <MatchmakingProvider>
               <ToastProvider>
-                <ClientRoot>{children}</ClientRoot>
+                <TransactionProvider>
+                  <ClientRoot>{children}</ClientRoot>
+                </TransactionProvider>
               </ToastProvider>
             </MatchmakingProvider>
           </AppProvider>

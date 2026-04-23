@@ -200,7 +200,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
+    <div className="min-h-screen p-4 md:p-8" role="region" aria-label="Home">
       {/* Web3 Status Bar */}
       <div className="mb-4">
         <Web3StatusBar />
@@ -208,13 +208,13 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row gap-8 items-center justify-center">
           {/* Chessboard Section */}
-          <div className="w-full max-w-[600px] order-2 md:order-1">
+          <div className="w-full max-w-[600px] order-2 md:order-1" role="region" aria-label="Chessboard">
             <div className="w-full min-w-[320px]">
-              <ChessboardComponent position={position} onDrop={handleMove} />
+              <ChessboardComponent position={position} onDrop={handleMove} aria-label="Chess board. Use arrow keys or mouse to interact." />
             </div>
 
             {gameMode && (
-              <div className="mt-4 flex items-center justify-between bg-gray-800/60 p-4 rounded-xl border border-gray-700/50 animate-slide-up">
+              <div className="mt-4 flex items-center justify-between bg-gray-800/60 p-4 rounded-xl border border-gray-700/50 animate-slide-up" role="status" aria-live="polite">
                 <div className="flex items-center gap-4">
                   <div className="bg-gradient-to-br from-teal-400/30 to-blue-500/30 p-3 rounded-xl">
                     {gameMode === "online" ? (
@@ -240,7 +240,7 @@ export default function Home() {
             )}
 
             {gameMode === "online" && matchmakingStatus === "searching" && (
-              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center animate-overlay-in">
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center animate-overlay-in" role="dialog" aria-modal="true" aria-label="Searching for opponent">
                 <div className="bg-gray-900 p-8 rounded-2xl border border-yellow-500/30 text-center animate-modal-in max-w-sm w-full mx-4">
                   <div className="flex flex-col items-center gap-4">
                     <h3 className="text-xl font-bold text-yellow-400">
@@ -251,7 +251,7 @@ export default function Home() {
                       <span className="relative inline-flex rounded-full h-10 w-10 border-2 border-yellow-500 bg-yellow-500/10"></span>
                     </span>
 
-                    <p className="text-gray-300 text-sm">
+                    <p className="text-gray-300 text-sm" aria-live="polite">
                       {onlinePlayerCount} Players online
                     </p>
 
@@ -267,7 +267,7 @@ export default function Home() {
             )}
 
             {gameMode === "online" && socketStatus === "reconnecting" && (
-              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center animate-overlay-in">
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center animate-overlay-in" role="dialog" aria-modal="true" aria-label="Reconnecting to game">
                 <div className="bg-gray-900 p-8 rounded-2xl border border-yellow-500/30 text-center animate-modal-in max-w-sm w-full mx-4">
                   <div className="flex flex-col items-center gap-4">
                     <div className="w-10 h-10 rounded-full border-2 border-yellow-500 border-t-transparent animate-spin" />
@@ -290,7 +290,7 @@ export default function Home() {
           </div>
 
           {/* Game Modes Section */}
-          <div className="flex flex-col justify-center space-y-6 max-w-[500px] w-full order-1 md:order-2">
+          <div className="flex flex-col justify-center space-y-6 max-w-[500px] w-full order-1 md:order-2" role="region" aria-label="Game mode selection">
             {!gameMode && <GameModeButtons setGameMode={handleSetGameMode} />}
           </div>
         </div>

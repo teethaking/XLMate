@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useAppContext } from "@/context/walletContext";
+import { useTransactionContext } from "@/context/transactionContext";
 
 /**
  * Web3StatusBar — A compact indicator shown at the top of the main content area.
@@ -10,6 +11,7 @@ import { useAppContext } from "@/context/walletContext";
  */
 export function Web3StatusBar() {
   const { address, status } = useAppContext();
+  const { activeCount } = useTransactionContext();
 
   const statusConfig: Record<
     string,
@@ -43,8 +45,8 @@ export function Web3StatusBar() {
     `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-gray-800/40 border border-gray-700/30 text-sm">
-      <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+    <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-gray-800/40 border border-gray-700/30 text-sm" role="status" aria-label="Wallet connection status">
+      <span className={`w-2 h-2 rounded-full ${cfg.dot}`} aria-hidden="true" />
       <span className={`${cfg.color} font-medium`}>{cfg.label}</span>
       {address && (
         <>
@@ -56,9 +58,18 @@ export function Web3StatusBar() {
       )}
       <span className="text-gray-600">|</span>
       <span className="text-xs text-gray-500 flex items-center gap-1">
-        <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+        <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" aria-hidden="true" />
         Testnet
       </span>
+      {activeCount > 0 && (
+        <>
+          <span className="text-gray-600">|</span>
+          <span className="text-xs text-blue-400 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" aria-hidden="true" />
+            {activeCount} tx
+          </span>
+        </>
+      )}
     </div>
   );
 }

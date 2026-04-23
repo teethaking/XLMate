@@ -7,6 +7,7 @@ import { FaTrophy, FaStar, FaCheck, FaTimes, FaRedo, FaArrowLeft } from "react-i
 import { useAppContext } from "@/context/walletContext";
 import { useToast } from "@/components/ui/toast";
 import { Web3StatusBar } from "@/components/Web3StatusBar";
+import { useTrackedTransaction } from "@/hook/useTrackedTransaction";
 
 const ChessboardComponent = dynamic(
   () => import("@/components/chess/ChessboardComponent"),
@@ -84,6 +85,12 @@ export default function PuzzlesPage() {
 
   const { address, status: walletStatus } = useAppContext();
   const { addToast } = useToast();
+
+  const { execute: executeClaim } = useTrackedTransaction({
+    type: "claim",
+    label: `Claim ${rewardAmount || "0.01"} XLM reward`,
+    amount: String(rewardAmount),
+  });
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -171,25 +178,18 @@ export default function PuzzlesPage() {
       return;
     }
     setIsClaiming(true);
-    try {
+
+    const result = await executeClaim(async () => {
       // Simulate on-chain reward claim — in production this would invoke a Soroban contract
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      addToast({
-        severity: "success",
-        title: "Reward Claimed!",
-        detail: `${rewardAmount} XLM has been sent to your wallet.`,
-      });
+      return true;
+    });
+
+    setIsClaiming(false);
+    if (result !== undefined) {
       setShowReward(false);
-    } catch {
-      addToast({
-        severity: "error",
-        title: "Claim Failed",
-        detail: "Could not claim reward. Please try again.",
-      });
-    } finally {
-      setIsClaiming(false);
     }
-  }, [walletStatus, address, rewardAmount, addToast]);
+  }, [walletStatus, address, addToast, executeClaim]);
 
   const completionRate = Math.round((completedPuzzles.size / MOCK_PUZZLES.length) * 100);
 
@@ -237,10 +237,10 @@ export default function PuzzlesPage() {
 
   if (selectedPuzzle) {
     return (
-      <div className="min-h-screen p-4 md:p-8">
+      <div className="min-h-screen p-4 md:p-8" role="region" aria-label="Chess Puzzles">
         {/* Reward Popup */}
         {showReward && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center animate-overlay-in">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center animate-overlay-in" role="dialog" aria-modal="true" aria-label="Puzzle reward">
             <div className="bg-gray-900 p-8 rounded-2xl border border-emerald-500/30 text-center animate-modal-in max-w-sm w-full mx-4">
               <div className="flex flex-col items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400/20 to-emerald-500/20 flex items-center justify-center">
@@ -282,6 +282,7 @@ export default function PuzzlesPage() {
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => setSelectedPuzzle(null)}
+              aria-label="Back to puzzles list"
               className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
             >
               <FaArrowLeft />
@@ -304,7 +305,14 @@ export default function PuzzlesPage() {
             {/* Progress */}
             <div className="flex items-center gap-4 text-sm text-gray-400">
               <span>Move {currentMove + 1} of {selectedPuzzle.solution.length}</span>
-              <div className="flex-1 bg-gray-700 rounded-full h-2">
+              <div
+                className="flex-1 bg-gray-700 rounded-full h-2"
+                role="progressbar"
+                aria-valuenow={currentMove + 1}
+                aria-valuemin={0}
+                aria-valuemax={selectedPuzzle.solution.length}
+                aria-label="Puzzle progress"
+              >
                 <div 
                   className="bg-gradient-to-r from-teal-500 to-blue-500 h-2 rounded-full transition-all duration-500"
                   style={{ width: `${((currentMove + 1) / selectedPuzzle.solution.length) * 100}%` }}
@@ -341,6 +349,7 @@ export default function PuzzlesPage() {
                 </div>
                 <button
                   onClick={() => setShowHint(!showHint)}
+                  aria-pressed={showHint}
                   className="w-full px-4 py-2.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-xl text-blue-400 font-medium transition-colors text-sm"
                 >
                   💡 Hint
@@ -371,11 +380,15 @@ export default function PuzzlesPage() {
           
               {/* Result Display */}
               {isCorrect !== null && (
-                <div className={`mt-3 p-3 rounded-lg border animate-scale-in ${
-                  isCorrect 
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                    : 'bg-red-500/10 border-red-500/30 text-red-400'
-                }`}>
+                <div
+                  className={`mt-3 p-3 rounded-lg border animate-scale-in ${
+                    isCorrect
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                      : 'bg-red-500/10 border-red-500/30 text-red-400'
+                  }`}
+                  role="alert"
+                  aria-live="assertive"
+                >
                   <p className="font-medium text-sm">
                     {isCorrect ? '✅ Correct! Well done!' : '❌ Not quite right. Try again!'}
                   </p>
@@ -432,6 +445,10 @@ export default function PuzzlesPage() {
                 }`}
                 style={{ animationDelay: `${idx * 0.05}s` }}
                 onClick={() => handlePuzzleSelect(puzzle)}
+                onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePuzzleSelect(puzzle); } }}
+                role="button"
+                tabIndex={0}
+                aria-label={`${puzzle.title} — ${puzzle.difficulty} difficulty${isCompleted ? ', completed' : ''}`}
               >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-white">{puzzle.title}</h3>
