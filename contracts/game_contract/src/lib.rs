@@ -110,7 +110,7 @@ impl GameContract {
             .expect("Token contract is not initialized")
     }
 
-    fn token_client(env: &Env) -> TokenClient {
+    fn token_client(env: &Env) -> TokenClient<'_> {
         TokenClient::new(env, &Self::token_contract_address(env))
     }
 
@@ -383,12 +383,6 @@ impl GameContract {
         }
 
         let mut total_percentage: u32 = 0;
-        for i in 0..percentages.len() {
-            total_percentage += percentages.get(i).unwrap();
-        }
-        if total_percentage != 100 {
-            return Err(ContractError::InvalidPercentage);
-        }
 
         let mut escrow: Map<Address, i128> = env
             .storage()
@@ -422,10 +416,15 @@ impl GameContract {
         for i in 0..winners.len() {
             let winner = winners.get(i).unwrap();
             let percentage = percentages.get(i).unwrap();
+            total_percentage += percentage;
             let payout_amount = (total_pool * percentage as i128) / 100;
             distributed += payout_amount;
             let winner_escrow = escrow.get(winner.clone()).unwrap_or(0);
             escrow.set(winner.clone(), winner_escrow + payout_amount);
+        }
+
+        if total_percentage != 100 {
+            return Err(ContractError::InvalidPercentage);
         }
 
         // Dust goes to first winner
@@ -753,6 +752,9 @@ impl GameContract {
 // ────────────────────────────────────────────────────────────────────────────
 // Tests
 // ────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod test;
 
 #[cfg(test)]
 mod tests {
