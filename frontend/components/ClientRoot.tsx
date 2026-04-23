@@ -12,7 +12,7 @@ export default function ClientRoot({
 }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 text-white">
       <GameSidebar
         collapsed={isSidebarCollapsed}
         setCollapsed={setIsSidebarCollapsed}
