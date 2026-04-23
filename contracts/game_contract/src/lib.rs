@@ -882,7 +882,7 @@ impl GameContract {
 
         let game = games.get(game_id).ok_or(ContractError::GameNotFound)?;
 
-        if game.state == GameState::Created {
+        if game.state != GameState::InProgress {
             return Err(ContractError::NotDisputable);
         }
 
@@ -1069,6 +1069,10 @@ impl GameContract {
         let mut game = games
             .get(dispute.game_id)
             .ok_or(ContractError::GameNotFound)?;
+
+        if game.state != GameState::InProgress {
+            return Err(ContractError::GameAlreadyCompleted);
+        }
 
         match winner {
             Some(ref winner_addr) => {
@@ -1707,6 +1711,101 @@ mod tests {
         let dispute = client.get_dispute(&dispute_id);
         assert_eq!(dispute.status, DisputeStatus::Resolved);
         assert_eq!(token_client.balance(&player1), 1_100);
+    }
+
+    #[test]
+    fn test_file_dispute_rejects_settled_games() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let issuer = Address::generate(&env);
+        let stellar_token = env.register_stellar_asset_contract_v2(issuer.clone());
+        let token_address = stellar_token.address();
+        let stellar_asset_client = StellarAssetClient::new(&env, &token_address);
+
+        let admin = Address::generate(&env);
+        let player1 = Address::generate(&env);
+        let player2 = Address::generate(&env);
+        let arbitrator = Address::generate(&env);
+        let treasury_addr = Address::generate(&env);
+
+        stellar_asset_client.mint(&player1, &1_000i128);
+        stellar_asset_client.mint(&player2, &1_000i128);
+
+        let contract_id = env.register_contract(None, GameContract);
+        let client = GameContractClient::new(&env, &contract_id);
+
+        client.initialize_token(&admin, &token_address);
+        client.initialize_puzzle_rewards(
+            &admin,
+            &Bytes::from_slice(&env, &[0u8; 32]),
+            &0i128,
+            &0u32,
+            &treasury_addr,
+        );
+        client.configure_dispute_system(&admin, &arbitrator, &25i128);
+        client.set_max_stake(&1_000i128);
+
+        let wager: i128 = 100;
+        let game_id = client.create_game(&player1, &wager);
+        client.join_game(&game_id, &player2);
+        client.forfeit(&game_id, &player1);
+
+        let reason = Bytes::from_slice(&env, b"Too late");
+        let result = client.try_file_dispute(&game_id, &player1, &player2, &reason);
+        assert_eq!(result, Err(Ok(ContractError::NotDisputable)));
+    }
+
+    #[test]
+    fn test_resolve_dispute_rejects_already_settled_games() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let issuer = Address::generate(&env);
+        let stellar_token = env.register_stellar_asset_contract_v2(issuer.clone());
+        let token_address = stellar_token.address();
+        let stellar_asset_client = StellarAssetClient::new(&env, &token_address);
+
+        let admin = Address::generate(&env);
+        let player1 = Address::generate(&env);
+        let player2 = Address::generate(&env);
+        let arbitrator = Address::generate(&env);
+        let treasury_addr = Address::generate(&env);
+
+        stellar_asset_client.mint(&player1, &1_000i128);
+        stellar_asset_client.mint(&player2, &1_000i128);
+
+        let contract_id = env.register_contract(None, GameContract);
+        let client = GameContractClient::new(&env, &contract_id);
+
+        client.initialize_token(&admin, &token_address);
+        client.initialize_puzzle_rewards(
+            &admin,
+            &Bytes::from_slice(&env, &[0u8; 32]),
+            &0i128,
+            &0u32,
+            &treasury_addr,
+        );
+        client.configure_dispute_system(&admin, &arbitrator, &0i128);
+        client.set_max_stake(&1_000i128);
+
+        let wager: i128 = 100;
+        let game_id = client.create_game(&player1, &wager);
+        client.join_game(&game_id, &player2);
+
+        let reason = Bytes::from_slice(&env, b"Illegal move");
+        let dispute_id = client.file_dispute(&game_id, &player1, &player2, &reason);
+
+        client.forfeit(&game_id, &player1);
+
+        let resolution = Bytes::from_slice(&env, b"Awarding win to player1");
+        let result = client.try_resolve_dispute(
+            &dispute_id,
+            &arbitrator,
+            &Some(player1.clone()),
+            &resolution,
+        );
+        assert_eq!(result, Err(Ok(ContractError::GameAlreadyCompleted)));
     }
 
     #[test]
