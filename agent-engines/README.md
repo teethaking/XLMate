@@ -156,6 +156,59 @@ async def run() -> None:
 asyncio.run(run())
 ```
 
+## Personality training pipeline
+
+The `personality/` package adds a training pipeline for configurable agent personas that shape how a UCI engine searches and prioritizes moves.
+
+### Modules
+
+- `personality/profile.py`: profile, trait, and search personalization models.
+- `personality/presets.py`: built-in presets such as `The Attacker`, `The Fortress`, and `The Berserker`.
+- `personality/style_analyzer.py`: PGN parsing and heuristic style extraction using `python-chess`.
+- `personality/tuner.py`: trait-to-UCI and search-parameter mapping for Stockfish and lc0.
+- `personality/evaluator.py`: similarity scoring between observed games and target profiles.
+- `personality/trainer.py`: async orchestration for analyze, train, refine, evaluate, and save.
+
+### Personality demo CLI
+
+```bash
+python main.py personality-demo --style tactical
+python main.py personality-demo --preset "The Attacker"
+python main.py personality-demo --list-presets
+```
+
+### Training example
+
+```python
+import asyncio
+
+from personality.config import PipelineConfig, TrainingConfig
+from personality.profile import PlayStyle
+from personality.trainer import PersonalityTrainer
+
+PGN = """[Event "Test Game"]
+[White "Attacker"]
+[Black "Defender"]
+[Result "1-0"]
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. b4 Bxb4 5. c3 Ba5 6. d4 exd4 7. O-O 1-0
+"""
+
+
+async def run() -> None:
+    trainer = PersonalityTrainer(TrainingConfig(engine_type="stockfish"))
+    profile = await trainer.run_pipeline(
+        PipelineConfig(
+            pgn_data=[PGN],
+            target_style=PlayStyle.AGGRESSIVE,
+            output_path="trained-profile.json",
+        )
+    )
+    print(profile.model_dump())
+
+
+asyncio.run(run())
+```
+
 ## Testing
 
 The test suite uses mocked UCI processes and does not require `lc0` or Stockfish to be installed.
