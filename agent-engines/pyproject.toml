@@ -30,4 +30,4 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
-include = ["gpu_worker", "personality"]
+include = ["gpu_worker", "personality", "orchestration"]

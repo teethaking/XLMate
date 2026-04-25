@@ -31,6 +31,12 @@ WorkerPool ------------------> ResourceMonitor
 - `gpu_worker/pool.py`: least-loaded worker dispatch.
 - `gpu_worker/batch.py`: time- and size-based batching layer.
 - `gpu_worker/resource_monitor.py`: CPU/GPU monitoring with graceful fallback.
+- `orchestration/models.py`: node, routing, and event models for decentralized dispatch.
+- `orchestration/node.py`: local/remote node abstraction around worker pools or network handlers.
+- `orchestration/registry.py`: async-safe node registration and discovery.
+- `orchestration/scheduler.py`: configurable request scheduling and load balancing strategies.
+- `orchestration/health.py`: background heartbeat and health-check loop.
+- `orchestration/router.py`: failover-aware request routing and bounded event logging.
 
 ## Requirements
 
@@ -94,6 +100,14 @@ Key options:
 ```bash
 python main.py
 ```
+
+### Run the orchestration demo
+
+```bash
+python main.py orchestration-demo
+```
+
+The demo creates a local `WorkerPool`, wraps it in an `EngineNode`, registers the node in a `NodeRegistry`, starts a `HealthMonitor`, and routes a sample `AnalysisRequest` through an `AnalysisRouter`.
 
 ### Submit a single request
 
@@ -204,6 +218,66 @@ async def run() -> None:
         )
     )
     print(profile.model_dump())
+
+
+asyncio.run(run())
+```
+
+## Decentralized orchestration
+
+The `orchestration/` package adds a decentralized coordination layer for distributing engine analysis across multiple nodes while preserving the existing local worker pool implementation.
+
+### Components
+
+- `NodeRegistry` tracks local and remote `EngineNode` instances behind an `asyncio.Lock`.
+- `RequestScheduler` supports `least_loaded`, `round_robin`, and `capability_match` strategies.
+- `HealthMonitor` performs background heartbeats and marks nodes unhealthy after repeated failures.
+- `AnalysisRouter` submits requests with retry and failover, and stores recent routing events in a bounded in-memory log.
+
+### Example
+
+```python
+import asyncio
+
+from gpu_worker.models import AnalysisRequest, AnalysisResult
+from orchestration import (
+    AnalysisRouter,
+    EngineNode,
+    HealthMonitor,
+    NodeCapability,
+    NodeInfo,
+    NodeRegistry,
+    OrchestrationConfig,
+    RequestScheduler,
+)
+
+
+async def submit(request: AnalysisRequest) -> AnalysisResult:
+    return AnalysisResult(request_id=request.id, best_move="e2e4")
+
+
+async def run() -> None:
+    registry = NodeRegistry()
+    node = EngineNode(
+        NodeInfo(
+            address="127.0.0.1:9000",
+            capabilities=[NodeCapability.GPU_ANALYSIS],
+            max_concurrent=4,
+        ),
+        submit_handler=submit,
+    )
+    await registry.register_node(node)
+
+    config = OrchestrationConfig(load_balance_strategy="least_loaded")
+    health = HealthMonitor(registry, config)
+    scheduler = RequestScheduler(registry, config)
+    router = AnalysisRouter(registry, scheduler, config)
+
+    await health.start()
+    try:
+        await router.route(AnalysisRequest(fen="8/8/8/8/8/8/8/K6k w - - 0 1"))
+    finally:
+        await health.stop()
 
 
 asyncio.run(run())
