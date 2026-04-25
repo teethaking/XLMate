@@ -5,7 +5,18 @@ import asyncio
 import json
 
 from gpu_worker.config import WorkerConfig
+from gpu_worker.models import AnalysisRequest
 from gpu_worker.pool import WorkerPool
+from orchestration import (
+    AnalysisRouter,
+    EngineNode,
+    HealthMonitor,
+    NodeCapability,
+    NodeInfo,
+    NodeRegistry,
+    OrchestrationConfig,
+    RequestScheduler,
+)
 from personality.config import TrainingConfig
 from personality.presets import get_preset, list_presets
 from personality.profile import PlayStyle
@@ -27,6 +38,10 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("worker", help="Start the GPU analysis worker pool")
+    subparsers.add_parser(
+        "orchestration-demo",
+        help="Run a local orchestration demo on top of the worker pool",
+    )
 
     personality_parser = subparsers.add_parser(
         "personality-demo",
@@ -81,6 +96,50 @@ async def run_personality_demo(args: argparse.Namespace) -> None:
     print(json.dumps(profile.model_dump(mode="json"), indent=2))
 
 
+async def run_orchestration_demo() -> None:
+    """Create a local node and route a sample request through the orchestrator."""
+
+    worker_config = WorkerConfig()
+    pool = WorkerPool([worker_config])
+    await pool.start_all()
+
+    node_info = NodeInfo(
+        address="127.0.0.1:9000",
+        capabilities=[NodeCapability.GPU_ANALYSIS, NodeCapability.CPU_ANALYSIS],
+        gpu_devices=1,
+        max_concurrent=worker_config.max_concurrent_analyses,
+        metadata={"mode": "local-demo"},
+    )
+    node = EngineNode(node_info, worker_pool=pool)
+    registry = NodeRegistry()
+    await registry.register_node(node)
+
+    orchestration_config = OrchestrationConfig()
+    health_monitor = HealthMonitor(registry, orchestration_config)
+    scheduler = RequestScheduler(registry, orchestration_config)
+    router = AnalysisRouter(registry, scheduler, orchestration_config)
+    await health_monitor.start()
+
+    try:
+        result = await router.route(
+            AnalysisRequest(fen="8/8/8/8/8/8/8/K6k w - - 0 1", depth=10)
+        )
+        print(
+            json.dumps(
+                {
+                    "node_id": node.info.node_id,
+                    "online_nodes": registry.online_count,
+                    "result": result.model_dump(mode="json"),
+                    "events": [event.model_dump(mode="json") for event in router.get_recent_events()],
+                },
+                indent=2,
+            )
+        )
+    finally:
+        await health_monitor.stop()
+        await pool.shutdown_all()
+
+
 async def main() -> None:
     """Dispatch the requested CLI action."""
 
@@ -90,6 +149,9 @@ async def main() -> None:
 
     if command == "personality-demo":
         await run_personality_demo(args)
+        return
+    if command == "orchestration-demo":
+        await run_orchestration_demo()
         return
     await run_worker()
 
